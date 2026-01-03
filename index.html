@@ -2,91 +2,141 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ito Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>ito Friends | 協力型パーティーゲーム</title>
+    <meta name="description" content="数字を口頭で表現して、小さい順に並べよう！インストール不要、ブラウザですぐに遊べる協力型パーティーゲームです。">
+
+    <link rel="canonical" href="https://★あなたのユーザー名.github.io/★リポジトリ名/">
+
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ito Clone">
+    <meta property="og:title" content="ito Clone | 協力型パーティーゲーム">
+    <meta property="og:description" content="みんなで協力してクリアを目指そう！「1〜100」の数字をテーマに沿った言葉で例えるゲーム。">
+    <meta property="og:url" content="https://★あなたのユーザー名.github.io/★リポジトリ名/">
+    <meta property="og:image" content="https://★あなたのユーザー名.github.io/★リポジトリ名/ogp.png">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ito Clone | 協力型パーティーゲーム">
+    <meta name="twitter:description" content="ブラウザですぐ遊べる！協力型数字並べゲーム。">
+    <meta name="twitter:image" content="https://★あなたのユーザー名.github.io/★リポジトリ名/ogp.png">
+
+    <meta name="theme-color" content="#3f51b5">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
+    <div class="background-guide"></div>
+
     <div id="lobby-screen" class="screen">
-        <div class="lobby-box">
-            <h1>ito Clone</h1>
-            <p>協力して数字を並べよう</p>
-            
+        <div class="card-panel lobby-box">
+            <h1 class="app-title">ito Friends</h1>
+            <p class="app-subtitle">協力型パーティーゲーム</p>
             <div class="input-group">
                 <label>ニックネーム</label>
                 <input type="text" id="username-input" placeholder="例: たなか" maxlength="8">
             </div>
-            
             <div class="input-group">
-                <label>部屋番号 (Room ID)</label>
-                <input type="text" id="room-input" placeholder="例: 101">
+                <label>部屋番号</label>
+                <input type="tel" id="room-input" placeholder="例: 101" pattern="\d*">
             </div>
-
-            <button id="join-btn" class="btn-play">部屋に入る / 作る</button>
+            <button id="join-btn" class="btn btn-primary btn-large">部屋に入る / 作る</button>
         </div>
     </div>
 
     <div id="game-screen" class="game-container hidden">
-        <header>
-            <div class="theme-box">
-                <p class="label">お題</p>
+        <header class="app-bar">
+            <div class="theme-container">
+                <span class="label-mini">現在のお題</span>
                 <h2 id="theme-text">読み込み中...</h2>
-                <div class="range-info">
-                    <span id="range-min" class="range-tag min">← 小：???</span>
-                    <span id="range-max" class="range-tag max">大：??? →</span>
+                <div class="range-indicator">
+                    <span class="range-tag min">Low</span>
+                    <div class="range-bar"></div>
+                    <span class="range-tag max">High</span>
+                </div>
+                <div class="range-text-row">
+                    <span id="range-min" class="range-text">???</span>
+                    <span id="range-max" class="range-text">???</span>
                 </div>
             </div>
-            
-            <div class="header-buttons">
-                <button id="history-btn" class="btn-history">履歴</button>
+            <div class="header-actions">
+                <div class="tool-group">
+                    <button id="history-btn" class="icon-btn" title="履歴">
+                        <span class="material-icon">History</span>
+                    </button>
+                    <button id="exit-btn" class="icon-btn logout" title="退出">
+                        <span class="material-icon">Exit</span>
+                    </button>
+                </div>
                 
-                <div id="host-controls" class="header-buttons hidden">
-                    <button id="next-game-btn" class="btn-next">次のゲームへ</button>
-                    <button id="reveal-btn" class="btn-reveal">OPEN</button>
-                    <button id="reset-btn" class="btn-reset">リセット</button>
+                <div id="host-controls" class="hidden host-group">
+                    <button id="reveal-btn" class="btn btn-accent btn-sm">OPEN</button>
+                    <button id="next-game-btn" class="btn btn-primary btn-sm">次へ</button>
+                    <button id="reset-btn" class="btn btn-danger btn-sm">×</button>
                 </div>
             </div>
         </header>
 
         <div id="member-bar" class="member-bar">
-            <div class="member-summary">
+            <div class="member-summary" id="toggle-members">
                 <span id="member-count">参加者: 0人</span>
-                <button id="toggle-members" class="btn-sm">▼ 詳細</button>
+                <span class="toggle-icon">▼</span>
             </div>
-            <div id="member-list" class="member-list hidden">
-                </div>
+            <div id="member-list" class="member-list hidden"></div>
         </div>
 
         <main>
-            <p class="field-label">小さい順に並べてください（←小 大→）</p>
-            
             <div id="field-area" class="card-list"></div>
 
-            <div id="result-overlay" class="result-overlay hidden">
-                <div class="result-box">
+            <div id="result-overlay" class="overlay hidden result-overlay-style">
+                <div class="card-panel result-box">
+                    <div id="result-icon" class="result-icon">🎉</div>
                     <h2 id="result-title">SUCCESS!</h2>
-                    <p id="result-desc">判定結果がここに表示されます</p>
-                    <button id="close-result" class="btn-play">閉じる</button>
+                    <p id="result-desc">テキスト</p>
+                    <button id="close-result" class="btn btn-primary">閉じる</button>
                 </div>
             </div>
         </main>
 
         <footer>
-            <div id="hand-area" class="hand-wrapper">
-                <div id="my-card" class="card my-card">?</div>
+            <div class="hand-container">
+                <div class="my-card-wrapper">
+                    <div id="my-card" class="card my-card">?</div>
+                </div>
+                <div class="action-wrapper">
+                    <button id="play-btn" class="btn btn-primary btn-fab">カードを出す</button>
+                </div>
             </div>
-            <button id="play-btn" class="btn-play">カードを出す</button>
         </footer>
     </div>
 
     <div id="history-modal" class="modal hidden">
-        <div class="modal-content">
-            <span id="close-history" class="close-btn">&times;</span>
-            <h2>これまでの戦績</h2>
+        <div class="modal-content card-panel">
+            <div class="modal-header">
+                <h2>戦績履歴</h2>
+                <span id="close-history" class="close-btn">&times;</span>
+            </div>
             <div id="history-list" class="history-list">
-                <p>まだ履歴はありません</p>
+                <p class="empty-msg">まだ履歴はありません</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal hidden">
+        <div class="card-panel confirm-box">
+            <h3 id="confirm-msg">確認</h3>
+            <div class="confirm-actions">
+                <button id="confirm-cancel" class="btn btn-text">キャンセル</button>
+                <button id="confirm-ok" class="btn btn-primary">OK</button>
             </div>
         </div>
     </div>
