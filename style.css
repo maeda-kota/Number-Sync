@@ -210,70 +210,65 @@ footer { background: var(--surface); padding: 15px 20px; box-shadow: 0 -2px 10px
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
-
 /* =========================================
-   Mobile Optimization (スマホ用調整)
+   Mobile Optimization (スマホ用調整・修正版)
    ========================================= */
 @media (max-width: 600px) {
     
-    /* 1. 全体のセーフエリア対応 */
-    /* iPhoneのノッチやホームバーに被らないように内側に余白を作る */
     body {
-        padding-top: env(safe-area-inset-top); 
-        padding-bottom: env(safe-area-inset-bottom);
+        /* ★修正: ノッチがあるならその分、なければ最低20pxの余白を強制確保 */
+        padding-top: max(20px, env(safe-area-inset-top)); 
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
-        background-color: var(--surface); /* 余白部分が白くならないよう調整 */
+        background-color: var(--surface);
     }
 
-    /* 2. ヘッダー（お題エリア）の視認性向上 */
     .app-bar {
-        /* 上部の余白をしっかり確保して端っこ問題を解消 */
-        padding: 15px 15px 10px 15px;
-        flex-wrap: wrap; /* 画面が狭い時にボタンがはみ出ないよう折り返し許可 */
+        /* ヘッダーの中身も少し余裕を持たせる */
+        padding: 10px 15px;
+        flex-wrap: wrap;
         gap: 10px;
         position: relative;
-        z-index: 100; /* カードより確実に上に来るように */
+        z-index: 100;
     }
 
     .theme-container {
-        /* お題がつぶれないように最低幅を確保 */
         min-width: 150px;
         flex: 1;
     }
 
     #theme-text {
-        font-size: 1rem; /* スマホでは文字サイズを少し抑えて改行を防ぐ */
+        font-size: 1rem;
         line-height: 1.4;
     }
 
-    /* 3. カード表示領域の縮小・調整 */
     main {
-        /* 上下に余白を入れて、ヘッダー・フッターとの境界を明確にする */
-        padding: 15px; 
-        
-        /* 背景色を少し暗くして、カードエリアを浮き立たせる演出（任意） */
+        /* 上の余白を増やし、ヘッダーにめり込まないようにする */
+        padding: 20px 15px; 
         background-color: var(--bg-color);
     }
 
     .card-list {
-        /* カードが画面端ギリギリにならないように調整 */
         padding: 5px;
-        
-        /* カード同士の間隔を少し詰める */
-        gap: 10px;
+        gap: 8px; /* カード間隔を少し狭く */
     }
 
-    /* カード自体のサイズをスマホ用に少し小さく最適化 */
+    /* カードサイズをさらに少し小さくして、狭い画面でも並びやすく */
     .field-card {
-        width: 58px;
-        height: 88px;
+        width: 55px;
+        height: 85px;
         font-size: 0.8rem;
     }
+    
+    /* カード内のアバターも少し小さく */
+    .card-avatar {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
 
-    /* 4. フッター（自分の手札）の調整 */
     footer {
-        /* 下部のホームバーに被らないよう余白追加 */
         padding-bottom: max(15px, env(safe-area-inset-bottom));
     }
 }
