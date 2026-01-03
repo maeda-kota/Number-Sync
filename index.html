@@ -33,26 +33,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 </head>
 <body>
-
-    <div class="background-guide"></div>
-
     <div id="lobby-screen" class="screen">
         <div class="card-panel lobby-box">
             <h1 class="app-title">ito Friends</h1>
             <p class="app-subtitle">協力型パーティーゲーム</p>
+            
             <div class="input-group">
                 <label>ニックネーム</label>
                 <input type="text" id="username-input" placeholder="例: たなか" maxlength="8">
             </div>
+            
             <div class="input-group">
                 <label>部屋番号</label>
                 <input type="tel" id="room-input" placeholder="例: 101" pattern="\d*">
             </div>
+
+            <div class="input-group">
+                <label>お題デッキ (部屋を作る場合)</label>
+                <div class="select-wrapper">
+                    <select id="lobby-theme-select">
+                        <option value="normal">ノーマル (定番・万人向け)</option>
+                        <option value="rainbow">レインボー (恋愛・大人向け)</option>
+                        <option value="classic">クラシック (シンプル・原点)</option>
+                        <option value="all">オールスター (全種ごちゃまぜ)</option>
+                    </select>
+                </div>
+                <p class="caption-text">※ 既存の部屋に入る場合は無視されます</p>
+            </div>
+
             <button id="join-btn" class="btn btn-primary btn-large">部屋に入る / 作る</button>
         </div>
     </div>
 
     <div id="game-screen" class="game-container hidden">
+        <div class="background-guide"></div>    
         <header class="app-bar">
             <div class="theme-container">
                 <span class="label-mini">現在のお題</span>
@@ -76,7 +90,6 @@
                         <span class="material-icon">Exit</span>
                     </button>
                 </div>
-                
                 <div id="host-controls" class="hidden host-group">
                     <button id="reveal-btn" class="btn btn-accent btn-sm">OPEN</button>
                     <button id="next-game-btn" class="btn btn-primary btn-sm">次へ</button>
@@ -95,7 +108,6 @@
 
         <main>
             <div id="field-area" class="card-list"></div>
-
             <div id="result-overlay" class="overlay hidden result-overlay-style">
                 <div class="card-panel result-box">
                     <div id="result-icon" class="result-icon">🎉</div>
@@ -136,6 +148,29 @@
             <div class="confirm-actions">
                 <button id="confirm-cancel" class="btn btn-text">キャンセル</button>
                 <button id="confirm-ok" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="next-game-modal" class="modal hidden">
+        <div class="card-panel confirm-box">
+            <h3>次のゲーム設定</h3>
+            <p>お題のデッキを変更しますか？</p>
+            
+            <div class="input-group">
+                <div class="select-wrapper">
+                    <select id="next-theme-select">
+                        <option value="normal">ノーマル (定番)</option>
+                        <option value="rainbow">レインボー (恋愛・大人)</option>
+                        <option value="classic">クラシック (シンプル)</option>
+                        <option value="all">オールスター (全種)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="confirm-actions">
+                <button id="next-cancel" class="btn btn-text">キャンセル</button>
+                <button id="next-ok" class="btn btn-primary">スタート</button>
             </div>
         </div>
     </div>
