@@ -73,8 +73,11 @@ class GameManager {
         
         this.currentThemeList = []; 
         this.currentThemeType = 'normal';
-        
         this.currentThemeTitle = "";
+        
+        // ★修正: 結果表示済みフラグを追加
+        this.hasShownResult = false;
+        
         this.onConfirmCallback = null;
         
         this.init();
@@ -159,7 +162,15 @@ class GameManager {
         const room = this.roomInput.value.trim();
         const selectedThemeType = this.lobbyThemeSelect.value;
 
-        if (!name || !room) { alert("入力してください"); return; }
+        if (!name || !room) { 
+            alert("入力してください"); 
+            return; 
+        }
+
+        if (!/^\d{3}$/.test(room)) {
+            alert("部屋番号は「3桁の数字」で入力してください（例: 101）");
+            return;
+        }
         
         this.roomIdDisplay.textContent = room;
 
@@ -245,6 +256,8 @@ class GameManager {
             this.drawNewCard();
         }
         this.resultOverlay.classList.add('hidden');
+        // ★修正: リロード時は結果を見ていない状態に戻す（ただしstatusがrevealedならすぐ表示される）
+        this.hasShownResult = false;
     }
 
     drawNewCard() {
@@ -320,7 +333,6 @@ class GameManager {
         });
     }
 
-    // ★修正: 判定時に「今いない人」のカードを除外する
     calculateResult(roomData) {
         if (!roomData || !roomData.cards) return { isSuccess: true, resultText: "カードなし" };
         
@@ -328,10 +340,9 @@ class GameManager {
         const cardsObj = roomData.cards;
         const orderList = roomData.order || [];
 
-        // メンバーリストに名前がある人のカードだけを抽出
         let cardsArray = Object.keys(cardsObj)
             .map(key => ({ id: key, ...cardsObj[key] }))
-            .filter(card => members.includes(card.name)); // ★フィルタリング追加
+            .filter(card => members.includes(card.name));
 
         cardsArray.sort((a, b) => {
             const indexA = orderList.indexOf(a.id);
@@ -396,12 +407,16 @@ class GameManager {
                 }
             }
 
+            // playing状態に戻ったらフラグをリセット
+            if (roomData.status === 'playing') {
+                this.hasShownResult = false;
+            }
+
             if (!roomData.cards && roomData.status === 'playing') {
                 this.fieldArea.innerHTML = "";
                 if (this.playBtn.disabled) this.drawNewCard();
             }
 
-            // ★修正: 描画にも「今いない人を除外」したデータを渡す
             this.renderField(roomData);
             
             if (roomData.members) {
@@ -411,9 +426,14 @@ class GameManager {
                 this.memberList.innerHTML = "";
             }
 
+            // ★修正: まだ結果を表示していない場合のみ表示する
             if (roomData.status === 'revealed') {
                 const result = this.calculateResult(roomData);
-                this.showGameResult(result);
+                
+                if (!this.hasShownResult) {
+                    this.showGameResult(result);
+                    this.hasShownResult = true; // 表示済みにする
+                }
             } else {
                 if (!this.resultOverlay.classList.contains('hidden') && !roomData.cards) {
                     this.resultOverlay.classList.add('hidden');
@@ -458,11 +478,9 @@ class GameManager {
 
         const membersCount = roomData.members ? Object.keys(roomData.members).length : 0;
         
-        // ★修正: 「今いる人」かつ「カードを出している人」の数をカウント
         const currentMemberNames = roomData.members ? Object.values(roomData.members).map(m => m.name) : [];
         const cardsObj = roomData.cards || {};
         
-        // 有効なカード提出数（退出済みの人のカードはカウントしない）
         const validCardsCount = Object.values(cardsObj).filter(c => currentMemberNames.includes(c.name)).length;
         
         if (roomData.status === 'playing') {
@@ -483,7 +501,6 @@ class GameManager {
         }
     }
 
-    // ★修正: 「今いない人」のカードを描画しない
     renderField(roomData) {
         if (!roomData.cards) {
             this.fieldArea.innerHTML = "";
@@ -495,7 +512,6 @@ class GameManager {
         const orderList = roomData.order || [];
         const isRevealed = (roomData.status === 'revealed');
 
-        // ★フィルタリング: メンバーにいない人のカードは除外
         let cardsArray = Object.keys(cardsObj)
             .map(key => ({ id: key, ...cardsObj[key] }))
             .filter(card => members.includes(card.name));
