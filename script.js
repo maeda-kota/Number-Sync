@@ -31,8 +31,6 @@ class GameManager {
         
         this.roomIdDisplay = document.getElementById('room-id-display');
         this.lobbyThemeSelect = document.getElementById('lobby-theme-select');
-
-        // ★追加: お題ジャンル表示用要素
         this.themeTypeDisplay = document.getElementById('theme-type-display');
 
         this.lobbyScreen = document.getElementById('lobby-screen');
@@ -213,8 +211,7 @@ class GameManager {
         this.myMemberRef = push(membersRef, { name: this.myName, joinedAt: Date.now() });
         onDisconnect(this.myMemberRef).remove();
         
-        if (this.isHost) this.hostControls.classList.remove('hidden');
-        else this.hostControls.classList.add('hidden');
+        this.updateHostUI();
 
         this.restoreOrDrawCard(roomData);
 
@@ -239,12 +236,10 @@ class GameManager {
         }
         if (foundCard) {
             this.myNumber = foundCard.value;
-            // ★変更: 復帰時も数字を表示したままにする
             this.myCardElement.textContent = this.myNumber;
             this.myCardElement.classList.add('submitted');
             this.playBtn.textContent = "提出済み";
             this.playBtn.disabled = true;
-            // クリックイベントは不要（常に数字が見えているため）
             this.myCardElement.onclick = null;
         } else {
             this.drawNewCard();
@@ -266,10 +261,6 @@ class GameManager {
         if (this.playBtn.disabled) return;
         this.myCardRef = push(ref(db, `rooms/${this.currentRoomId}/cards`), { name: this.myName, value: this.myNumber });
         this.myCardElement.classList.add('submitted');
-        
-        // ★変更: 「済」に変えず、数字のまま維持
-        // this.myCardElement.textContent = "済"; // 削除
-        
         this.playBtn.textContent = "提出済み";
         this.playBtn.disabled = true;
         this.myCardElement.onclick = null;
@@ -329,11 +320,19 @@ class GameManager {
         });
     }
 
+    // ★修正: 判定時に「今いない人」のカードを除外する
     calculateResult(roomData) {
         if (!roomData || !roomData.cards) return { isSuccess: true, resultText: "カードなし" };
+        
+        const members = roomData.members ? Object.values(roomData.members).map(m => m.name) : [];
         const cardsObj = roomData.cards;
         const orderList = roomData.order || [];
-        let cardsArray = Object.keys(cardsObj).map(key => ({ id: key, ...cardsObj[key] }));
+
+        // メンバーリストに名前がある人のカードだけを抽出
+        let cardsArray = Object.keys(cardsObj)
+            .map(key => ({ id: key, ...cardsObj[key] }))
+            .filter(card => members.includes(card.name)); // ★フィルタリング追加
+
         cardsArray.sort((a, b) => {
             const indexA = orderList.indexOf(a.id);
             const indexB = orderList.indexOf(b.id);
@@ -341,6 +340,7 @@ class GameManager {
             if (indexB === -1) return -1;
             return indexA - indexB;
         });
+        
         let isSuccess = true;
         let resultTextArray = [];
         for (let i = 0; i < cardsArray.length; i++) {
@@ -352,10 +352,12 @@ class GameManager {
             }
             resultTextArray.push(`${current.name}(${val})`);
         }
+        
+        if (cardsArray.length === 0) return { isSuccess: true, resultText: "有効なカードなし" };
+        
         return { isSuccess, resultText: resultTextArray.join(" → ") };
     }
 
-    // ★追加: お題タイプの日本語表記変換
     getThemeTypeLabel(type) {
         const labels = {
             'normal': 'ノーマル',
@@ -378,6 +380,8 @@ class GameManager {
                 return;
             }
 
+            this.checkAndMigrateHost(roomData);
+
             if (roomData.theme) {
                 this.themeText.textContent = roomData.theme.title;
                 this.currentThemeTitle = roomData.theme.title;
@@ -385,11 +389,8 @@ class GameManager {
                 this.rangeMax.textContent = roomData.theme.max;
             }
 
-            // ★追加: お題ジャンルの表示更新
             if (roomData.themeType) {
                 this.themeTypeDisplay.textContent = this.getThemeTypeLabel(roomData.themeType);
-                
-                // ホスト以外の場合、デッキを同期しておく（次へ進む時用）
                 if (roomData.themeType !== this.currentThemeType) {
                     this.loadThemeDeck(roomData.themeType);
                 }
@@ -400,7 +401,9 @@ class GameManager {
                 if (this.playBtn.disabled) this.drawNewCard();
             }
 
+            // ★修正: 描画にも「今いない人を除外」したデータを渡す
             this.renderField(roomData);
+            
             if (roomData.members) {
                 this.renderMemberList(roomData.members, roomData.cards);
             } else {
@@ -417,35 +420,86 @@ class GameManager {
                 }
             }
 
-            if (this.isHost) {
-                const membersCount = roomData.members ? Object.keys(roomData.members).length : 0;
-                const cardsCount = roomData.cards ? Object.keys(roomData.cards).length : 0;
-                
-                if (roomData.status === 'playing') {
-                    if (membersCount > 0 && membersCount === cardsCount) {
-                        this.revealBtn.disabled = false;
-                        this.revealBtn.textContent = "OPEN";
-                    } else {
-                        this.revealBtn.disabled = true;
-                        this.revealBtn.textContent = `OPEN (${cardsCount}/${membersCount})`;
-                    }
-                } else {
-                    this.revealBtn.disabled = true;
-                    this.revealBtn.textContent = "OPEN済";
-                }
-            }
+            this.updateHostControls(roomData);
         });
     }
 
+    checkAndMigrateHost(roomData) {
+        if (!roomData.members || !roomData.host) return;
+
+        const members = Object.entries(roomData.members).map(([key, val]) => ({ id: key, ...val }));
+        const hostExists = members.some(m => m.name === roomData.host);
+
+        if (!hostExists) {
+            members.sort((a, b) => {
+                if (a.joinedAt && b.joinedAt) return a.joinedAt - b.joinedAt;
+                return a.id.localeCompare(b.id);
+            });
+            const nextHost = members[0];
+
+            if (nextHost && nextHost.name === this.myName) {
+                console.log("ホスト権限を自動継承しました");
+                update(ref(db, `rooms/${this.currentRoomId}`), { host: this.myName });
+                roomData.host = this.myName;
+            }
+        }
+        
+        this.isHost = (roomData.host === this.myName);
+        this.updateHostUI();
+    }
+
+    updateHostUI() {
+        if (this.isHost) this.hostControls.classList.remove('hidden');
+        else this.hostControls.classList.add('hidden');
+    }
+
+    updateHostControls(roomData) {
+        if (!this.isHost) return;
+
+        const membersCount = roomData.members ? Object.keys(roomData.members).length : 0;
+        
+        // ★修正: 「今いる人」かつ「カードを出している人」の数をカウント
+        const currentMemberNames = roomData.members ? Object.values(roomData.members).map(m => m.name) : [];
+        const cardsObj = roomData.cards || {};
+        
+        // 有効なカード提出数（退出済みの人のカードはカウントしない）
+        const validCardsCount = Object.values(cardsObj).filter(c => currentMemberNames.includes(c.name)).length;
+        
+        if (roomData.status === 'playing') {
+            if (membersCount > 1 && membersCount === validCardsCount) {
+                this.revealBtn.disabled = false;
+                this.revealBtn.textContent = "OPEN";
+            } else {
+                this.revealBtn.disabled = true;
+                if (membersCount <= 1) {
+                    this.revealBtn.textContent = "2人以上必要";
+                } else {
+                    this.revealBtn.textContent = `OPEN (${validCardsCount}/${membersCount})`;
+                }
+            }
+        } else {
+            this.revealBtn.disabled = true;
+            this.revealBtn.textContent = "OPEN済";
+        }
+    }
+
+    // ★修正: 「今いない人」のカードを描画しない
     renderField(roomData) {
         if (!roomData.cards) {
             this.fieldArea.innerHTML = "";
             return;
         }
+
+        const members = roomData.members ? Object.values(roomData.members).map(m => m.name) : [];
         const cardsObj = roomData.cards;
         const orderList = roomData.order || [];
         const isRevealed = (roomData.status === 'revealed');
-        let cardsArray = Object.keys(cardsObj).map(key => ({ id: key, ...cardsObj[key] }));
+
+        // ★フィルタリング: メンバーにいない人のカードは除外
+        let cardsArray = Object.keys(cardsObj)
+            .map(key => ({ id: key, ...cardsObj[key] }))
+            .filter(card => members.includes(card.name));
+
         cardsArray.sort((a, b) => {
             const indexA = orderList.indexOf(a.id);
             const indexB = orderList.indexOf(b.id);
@@ -453,6 +507,7 @@ class GameManager {
             if (indexB === -1) return -1;
             return indexA - indexB;
         });
+
         this.fieldArea.innerHTML = "";
         cardsArray.forEach(cardData => {
             const newCard = document.createElement('div');
