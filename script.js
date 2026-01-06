@@ -379,14 +379,14 @@ class GameManager {
         // 選択肢1: 先頭
         const optFirst = document.createElement('option');
         optFirst.value = "first";
-        optFirst.textContent = "一番左（最初）";
+        optFirst.textContent = "一番左（小さい）";
         this.positionSelect.appendChild(optFirst);
 
         // 選択肢2以降: 各カードの後ろ
         cardsArray.forEach((card) => {
             const opt = document.createElement('option');
             opt.value = card.id; // このカードIDの後ろに追加する
-            opt.textContent = `${card.name} の右（後ろ）`;
+            opt.textContent = `${card.name} の右（大きい）`;
             this.positionSelect.appendChild(opt);
         });
     }
@@ -769,10 +769,23 @@ class GameManager {
             const entries = Object.values(data).reverse();
             entries.forEach(entry => {
                 const item = document.createElement('div');
-                item.classList.add('history-item');
+                
+                // ★修正: success / fail クラスを親要素にも追加してデザインしやすくする
                 const statusClass = entry.isSuccess ? 'success' : 'fail';
+                item.classList.add('history-item', statusClass);
+                
                 const statusText = entry.isSuccess ? '成功' : '失敗';
-                item.innerHTML = `<div class="history-header"><span>${entry.theme}</span><span class="tag ${statusClass}">${statusText}</span></div><div class="history-detail">${entry.resultDetails}</div>`;
+                
+                // resultDetails (A(10) → B(20)) の矢印を見やすく装飾
+                const formattedDetails = entry.resultDetails.replace(/→/g, '<span class="arrow">→</span>');
+
+                item.innerHTML = `
+                    <div class="history-header">
+                        <span class="history-theme">${entry.theme}</span>
+                        <span class="tag ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="history-detail">${formattedDetails}</div>
+                `;
                 this.historyList.appendChild(item);
             });
         });
