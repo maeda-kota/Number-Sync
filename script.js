@@ -62,6 +62,10 @@ class GameManager {
         this.closeHistoryBtn = document.getElementById('close-history');
         this.historyList = document.getElementById('history-list');
         this.exitBtn = document.getElementById('exit-btn');
+        this.positionModal = document.getElementById('position-modal');
+        this.positionSelect = document.getElementById('position-select');
+        this.posOk = document.getElementById('pos-ok');
+        this.posCancel = document.getElementById('pos-cancel');
 
         // Game state
         this.currentRoomId = null;
@@ -184,13 +188,21 @@ class GameManager {
             roomData = null;
         }
 
-        if (!isRejoin && roomData && roomData.members) {
-            const isNameTaken = Object.values(roomData.members).some(m => m.name === name);
-            if (isNameTaken) { 
-                alert("その名前は既に使用されています。"); 
-                sessionStorage.removeItem('ito_room');
-                sessionStorage.removeItem('ito_name');
-                return; 
+        if (roomData && roomData.members) {
+            // ちなみに101人以上入るとFirebaseの無料枠制限で接続エラーが起きる可能性があります
+            if (Object.keys(roomData.members).length >= 100 && !isRejoin) {
+                alert("満員です（最大100人）");
+                return;
+            }
+            // 名前重複チェック
+            if (!isRejoin) {
+                const isNameTaken = Object.values(roomData.members).some(m => m.name === name);
+                if (isNameTaken) { 
+                    alert("その名前は既に使用されています。"); 
+                    sessionStorage.removeItem('ito_room');
+                    sessionStorage.removeItem('ito_name');
+                    return; 
+                }
             }
         }
 
@@ -218,9 +230,23 @@ class GameManager {
         sessionStorage.setItem('ito_room', room);
         sessionStorage.setItem('ito_name', name);
 
-        const membersRef = ref(db, `rooms/${this.currentRoomId}/members`);
-        this.myMemberRef = push(membersRef, { name: this.myName, joinedAt: Date.now() });
-        onDisconnect(this.myMemberRef).remove();
+        const currentMembers = roomData && roomData.members ? Object.values(roomData.members) : [];
+        const amIMember = currentMembers.some(m => m.name === this.myName);
+        
+        if (!amIMember) {
+            const membersRef = ref(db, `rooms/${this.currentRoomId}/members`);
+            this.myMemberRef = push(membersRef, { name: this.myName, joinedAt: Date.now() });
+            onDisconnect(this.myMemberRef).remove();
+        } else {
+            // 既にメンバーにいる場合はRefを取り直す（再接続用）
+            // ※厳密にはkeyを知る必要があるが、onDisconnect再設定のため簡易的に行うなら
+            // 既存の自分のkeyを探してセットするのがベスト。ここでは簡易復帰。
+            const membersKey = Object.keys(roomData.members).find(k => roomData.members[k].name === this.myName);
+            if(membersKey) {
+                this.myMemberRef = ref(db, `rooms/${this.currentRoomId}/members/${membersKey}`);
+                onDisconnect(this.myMemberRef).remove();
+            }
+        }
         
         this.updateHostUI();
 
@@ -260,23 +286,170 @@ class GameManager {
         this.hasShownResult = false;
     }
 
-    drawNewCard() {
-        this.myNumber = Math.floor(Math.random() * 100) + 1;
+    // 既存の drawNewCard をこれに書き換え
+    async drawNewCard() {
+        // まずボタンを無効化して連打防止
+        this.playBtn.disabled = true;
+        this.playBtn.textContent = "抽選中...";
+
+        // 最新の部屋データを取得して、使われている番号を調べる
+        const snapshot = await get(ref(db, `rooms/${this.currentRoomId}/cards`));
+        const cardsObj = snapshot.val() || {};
+        
+        // 既に使用されている番号のリストを作成
+        const usedNumbers = Object.values(cardsObj).map(card => parseInt(card.value));
+
+        // 被らない番号を生成
+        this.myNumber = this.generateUniqueNumber(usedNumbers);
+
+        // 画面に反映
         this.myCardElement.textContent = this.myNumber;
         this.myCardElement.classList.remove('submitted');
+        
         this.playBtn.textContent = "カードを出す";
         this.playBtn.disabled = false;
         this.myCardRef = null;
         this.myCardElement.onclick = null;
     }
 
-    playCard() {
+    // ★追加: 被らない番号を生成するロジック
+    generateUniqueNumber(usedNumbers) {
+        // 1から100までの数字の配列を作成
+        const candidates = [];
+        for (let i = 1; i <= 100; i++) {
+            // 使われていない数字だけを候補に入れる
+            if (!usedNumbers.includes(i)) {
+                candidates.push(i);
+            }
+        }
+
+        // 候補が一つもない場合（100枚すべて出尽くしたなど）のエラー回避
+        if (candidates.length === 0) {
+            console.error("カードがすべて使用済みです");
+            return 0; // エラー値
+        }
+
+        // 候補の中からランダムに1つ選ぶ
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        return candidates[randomIndex];
+    }
+
+    async playCard() {
         if (this.playBtn.disabled) return;
-        this.myCardRef = push(ref(db, `rooms/${this.currentRoomId}/cards`), { name: this.myName, value: this.myNumber });
+
+        // 現在のカード状況をデータベースから取得
+        const snapshot = await get(ref(db, `rooms/${this.currentRoomId}`));
+        const roomData = snapshot.val();
+        
+        // まだ誰もカードを出していない（またはデータがない）場合は、場所選択なしで即座に出す
+        if (!roomData || !roomData.cards || Object.keys(roomData.cards).length === 0) {
+            // ※このメソッドは Part 2-(4) で追加する新しい関数です
+            this.executePlayCardZero(); 
+            return;
+        }
+
+        // 既にカードがある場合は、選択肢を作ってモーダルを表示する
+        // ※このメソッドも Part 2-(4) で追加する新しい関数です
+        this.generatePositionOptions(roomData);
+        this.positionModal.classList.remove('hidden');
+    }
+
+    // 選択肢の生成
+    generatePositionOptions(roomData) {
+        this.positionSelect.innerHTML = "";
+        
+        const cardsObj = roomData.cards || {};
+        const orderList = roomData.order || [];
+        
+        // 現在画面に出ている順序でカードを並べる
+        let cardsArray = Object.keys(cardsObj).map(key => ({ id: key, ...cardsObj[key] }));
+        
+        // メンバーとして存在している人のカードのみ対象にする（退出済みの人のカードを選択肢に出さないため）
+        const members = roomData.members ? Object.values(roomData.members).map(m => m.name) : [];
+        cardsArray = cardsArray.filter(c => members.includes(c.name));
+
+        cardsArray.sort((a, b) => {
+            const indexA = orderList.indexOf(a.id);
+            const indexB = orderList.indexOf(b.id);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+
+        // 選択肢1: 先頭
+        const optFirst = document.createElement('option');
+        optFirst.value = "first";
+        optFirst.textContent = "一番左（最初）";
+        this.positionSelect.appendChild(optFirst);
+
+        // 選択肢2以降: 各カードの後ろ
+        cardsArray.forEach((card) => {
+            const opt = document.createElement('option');
+            opt.value = card.id; // このカードIDの後ろに追加する
+            opt.textContent = `${card.name} の右（後ろ）`;
+            this.positionSelect.appendChild(opt);
+        });
+    }
+
+    // 場所決定時の処理
+    async handlePositionSubmit() {
+        const selectedValue = this.positionSelect.value;
+        this.positionModal.classList.add('hidden');
+        
+        // 最新の並び順を取得
+        const snapshot = await get(ref(db, `rooms/${this.currentRoomId}/order`));
+        let currentOrder = snapshot.val() || [];
+        
+        // カードを保存
+        const newCardRef = push(ref(db, `rooms/${this.currentRoomId}/cards`), { 
+            name: this.myName, 
+            value: this.myNumber 
+        });
+        const newCardId = newCardRef.key;
+        this.myCardRef = newCardRef;
+
+        // 配列を更新
+        let newOrder = [...currentOrder];
+        
+        if (selectedValue === "first") {
+            newOrder.unshift(newCardId);
+        } else {
+            const targetIndex = newOrder.indexOf(selectedValue);
+            if (targetIndex !== -1) {
+                // 指定位置の次に挿入
+                newOrder.splice(targetIndex + 1, 0, newCardId);
+            } else {
+                // 見つからなければ末尾
+                newOrder.push(newCardId);
+            }
+        }
+
+        // 保存
+        await set(ref(db, `rooms/${this.currentRoomId}/order`), newOrder);
+
+        // ボタン更新
         this.myCardElement.classList.add('submitted');
         this.playBtn.textContent = "提出済み";
         this.playBtn.disabled = true;
-        this.myCardElement.onclick = null;
+    }
+
+    // 1枚目として出す場合の処理（選択なし）
+    async executePlayCardZero() {
+        const newCardRef = push(ref(db, `rooms/${this.currentRoomId}/cards`), { 
+            name: this.myName, 
+            value: this.myNumber 
+        });
+        const newCardId = newCardRef.key;
+        this.myCardRef = newCardRef;
+        
+        const snapshot = await get(ref(db, `rooms/${this.currentRoomId}/order`));
+        let currentOrder = snapshot.val() || [];
+        currentOrder.push(newCardId);
+        await set(ref(db, `rooms/${this.currentRoomId}/order`), currentOrder);
+
+        this.myCardElement.classList.add('submitted');
+        this.playBtn.textContent = "提出済み";
+        this.playBtn.disabled = true;
     }
 
     exitGame() {
@@ -420,7 +593,7 @@ class GameManager {
             this.renderField(roomData);
             
             if (roomData.members) {
-                this.renderMemberList(roomData.members, roomData.cards);
+                this.renderMemberList(roomData.members, roomData.cards, roomData.host);
             } else {
                 this.memberCount.textContent = "参加者: 0人";
                 this.memberList.innerHTML = "";
@@ -542,7 +715,7 @@ class GameManager {
         });
     }
 
-    renderMemberList(membersObj, cardsObj) {
+    renderMemberList(membersObj, cardsObj,hostName) {
         const members = Object.values(membersObj);
         const total = members.length;
         const submittedNames = cardsObj ? Object.values(cardsObj).map(c => c.name) : [];
@@ -555,8 +728,13 @@ class GameManager {
             item.classList.add('member-chip');
             const color = this.getColorFromName(member.name);
             const initial = member.name.charAt(0);
-            const statusMark = isSubmitted ? '✔' : '...';
-            item.innerHTML = `<div class="avatar-xs" style="background-color: ${color}">${initial}</div>${member.name}<span class="status-mark" style="color: ${isSubmitted ? 'green' : '#999'}">${statusMark}</span>`;
+            const statusMark = isSubmitted ? '✔' : '';
+            let hostLabel = "";
+            if(member.name === hostName) {
+                hostLabel = '<span class="host-badge">HOST</span>';
+            }
+            // ここでHTMLに埋め込む
+            item.innerHTML = `<div class="avatar-xs" style="background-color: ${color}">${initial}</div>${member.name}${hostLabel}<span class="status-mark" style="color: ${isSubmitted ? 'green' : '#999'}">${statusMark}</span>`;
             this.memberList.appendChild(item);
         });
         this.memberCount.textContent = `提出: ${submittedCount}/${total}人 (参加: ${total}人)`;
@@ -607,7 +785,10 @@ class GameManager {
         this.nextGameBtn.addEventListener('click', () => this.nextGame());
         this.resetBtn.addEventListener('click', () => this.resetGame());
         this.exitBtn.addEventListener('click', () => this.exitGame());
-        
+        this.posOk.addEventListener('click', () => this.handlePositionSubmit());
+        this.posCancel.addEventListener('click', () => this.positionModal.classList.add('hidden'));
+
+
         this.confirmOk.addEventListener('click', () => {
             this.confirmModal.classList.add('hidden');
             if (this.onConfirmCallback) {
@@ -636,6 +817,7 @@ class GameManager {
             if (e.target == this.confirmModal) this.confirmModal.classList.add('hidden');
             if (e.target == this.nextGameModal) this.nextGameModal.classList.add('hidden');
             if (e.target == this.resultOverlay) this.resultOverlay.classList.add('hidden');
+            if (e.target == this.positionModal) this.positionModal.classList.add('hidden');
         });
     }
 }

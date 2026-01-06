@@ -26,16 +26,18 @@ body {
     font-family: 'Roboto', 'Noto Sans JP', sans-serif;
     background-color: var(--bg-color); 
     color: var(--text-main);
-    height: 100vh; 
-    display: flex; 
-    justify-content: center; 
-    overflow: hidden;
+    /* 画面いっぱいに広げる設定 (スマホのアドレスバー対策含む) */
+    height: 100vh;
+    height: 100dvh; 
+    overflow: hidden; /* body自体のスクロールは禁止 */
+    display: flex;
+    justify-content: center;
 }
 
 .hidden { display: none !important; }
 
 /* =========================================
-   Background Guide
+   Background Guide (背景の矢印)
    ========================================= */
 .background-guide {
     position: fixed; 
@@ -55,73 +57,87 @@ body {
     color: rgba(0,0,0,0.05); 
     font-weight: bold;
 }
-
 /* =========================================
-   Layout Containers
+   Layout Containers (修正版)
    ========================================= */
-.screen, .game-container {
-    width: 100%; max-width: 600px; height: 100%; 
-    position: relative; z-index: 1;
+/* ゲーム画面用コンテナ */
+.game-container {
+    width: 100%; 
+    max-width: 600px; 
+    height: 100%; 
+    position: relative; 
+    z-index: 1;
     background-color: transparent; 
-    display: flex; flex-direction: column;
+    display: flex; 
+    flex-direction: column;
 }
 
 /* =========================================
-   Lobby Screen
+   Lobby Screen (レスポンシブ背景対応版)
    ========================================= */
-.screen { 
-    background-color: var(--primary); 
-    align-items: center; justify-content: center; 
+/* ロビー画面全体 */
+#lobby-screen { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    
+    /* 高さ設定: スマホのアドレスバーによるズレを防ぐ */
+    height: 100vh;
+    height: 100dvh; 
+    
+    z-index: 2000;
+    
+    /* ★背景画像のレスポンシブ設定★ */
+    background-color: var(--primary); /* 画像読み込み前の色 */
+    background-image: url('images/lobby-bg.png');
+    
+    /* 画面サイズに合わせて画像を拡大縮小し、隙間なく埋める */
+    background-size: cover;
+    
+    /* 常に画像の「中心」が表示されるようにする */
+    background-position: center center;
+    
+    /* 画像を繰り返さない */
+    background-repeat: no-repeat;
+    
+    /* Flexboxで中の白い箱を中央寄せ */
+    display: flex; 
+    flex-direction: column;
+    align-items: center; 
+    justify-content: center; 
 }
+
+/* ロビーの白い箱 */
 .card-panel { 
-    background: var(--surface); 
+    background: var(--surface); /* 白背景を明示 */
     border-radius: var(--radius-lg); 
     box-shadow: var(--shadow-2); 
     padding: 30px; 
     width: 85%; 
+    max-width: 400px; /* PCでも広がりすぎないように制限 */
     text-align: center; 
 }
+
 .app-title { color: var(--primary); margin: 0; font-size: 2rem; font-weight: 900; letter-spacing: 1px; }
 .app-subtitle { color: var(--text-sub); margin: 5px 0 25px 0; font-size: 0.9rem; }
-
-/* Forms */
-.input-group { text-align: left; margin-bottom: 20px; }
-.input-group label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px; font-weight: bold; }
-.input-group input { width: 100%; padding: 12px; font-size: 1rem; border: 2px solid #ddd; border-radius: var(--radius-sm); box-sizing: border-box; transition: 0.3s; }
-.input-group input:focus { border-color: var(--primary); outline: none; }
-
-.select-wrapper {
-    position: relative;
-    border: 2px solid #ddd;
-    border-radius: var(--radius-sm);
-    background: #fff;
-    overflow: hidden;
-}
-.select-wrapper select {
-    width: 100%; padding: 12px; border: none; font-size: 1rem;
-    background: transparent; cursor: pointer;
-    appearance: none; -webkit-appearance: none;
-}
-.select-wrapper::after {
-    content: "▼"; font-size: 0.8rem; color: var(--text-sub);
-    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-    pointer-events: none;
-}
-.select-wrapper:focus-within { border-color: var(--primary); }
-.caption-text { font-size: 0.75rem; color: var(--text-sub); margin: 5px 0 0 0; }
-
 /* =========================================
-   Game Header
+   App Bar (ヘッダー)
    ========================================= */
 .app-bar { 
     background: var(--surface); 
     padding: 10px 15px; 
     box-shadow: var(--shadow-1); 
     display: flex; justify-content: space-between; align-items: flex-start; 
+    
+    /* Flexアイテム設定: サイズ固定 */
+    flex-shrink: 0; 
     z-index: 10; 
+    position: relative;
 }
-.theme-container { flex: 1; margin-right: 10px; }
 
+/* 各パーツ */
+.theme-container { flex: 1; margin-right: 10px; }
 .label-row { display: flex; align-items: center; gap: 8px; }
 .label-mini { font-size: 0.7rem; color: var(--text-sub); display: block; }
 .theme-badge {
@@ -129,12 +145,10 @@ body {
     padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; font-weight: normal;
 }
 #theme-text { margin: 0; font-size: 1.1rem; color: var(--text-main); line-height: 1.3; }
-
 .room-badge {
     display: inline-block; background-color: #e3f2fd; color: var(--primary);
     font-size: 0.75rem; font-weight: bold; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px;
 }
-
 .range-indicator { display: flex; align-items: center; margin-top: 5px; gap: 5px; }
 .range-bar { flex: 1; height: 4px; background: linear-gradient(90deg, #3f51b5, #f50057); border-radius: 2px; }
 .range-tag { font-size: 0.7rem; font-weight: bold; }
@@ -147,36 +161,59 @@ body {
 .tool-group { display: flex; gap: 10px; margin-bottom: 5px; }
 
 /* =========================================
-   Member Bar
+   Member Bar (人数バー)
    ========================================= */
 .member-bar { 
-    background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); 
+    background: rgba(255,255,255,0.95); 
+    backdrop-filter: blur(5px); 
     border-bottom: 1px solid rgba(0,0,0,0.05); 
-    padding: 8px 15px; font-size: 0.85rem; z-index: 9; 
+    padding: 8px 15px; 
+    font-size: 0.85rem; 
+    z-index: 9;
+    
+    /* Flexアイテム設定: サイズ固定 */
+    flex-shrink: 0; 
 }
 .member-summary { display: flex; justify-content: space-between; cursor: pointer; color: var(--text-main); font-weight: 500; }
 .member-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
 .member-chip { display: flex; align-items: center; background: #fff; padding: 2px 8px 2px 2px; border-radius: 20px; border: 1px solid #eee; font-size: 0.8rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 .avatar-xs { width: 20px; height: 20px; border-radius: 50%; color: white; font-size: 10px; display: flex; justify-content: center; align-items: center; margin-right: 5px; font-weight: bold; }
 .status-mark { margin-left: 5px; font-size: 0.8rem; }
-
-/* =========================================
-   Main Field & Cards
-   ========================================= */
-main { 
-    flex: 1; overflow-y: auto; 
-    padding: 0 20px; 
-    position: relative; scrollbar-width: thin; 
+.host-badge {
+    background-color: #ff9800; color: white;
+    font-size: 0.6rem; padding: 1px 4px; border-radius: 4px;
+    margin-left: 4px; font-weight: bold;
 }
 
-.card-list { 
-    display: flex; flex-wrap: wrap; 
-    justify-content: center; align-content: flex-start; 
-    gap: 12px; 
+/* =========================================
+   Main Field (ここがスクロールする)
+   ========================================= */
+main { 
+    /* 余ったスペースを全て使う */
+    flex-grow: 1; 
+    overflow-y: auto; /* ここだけスクロールさせる */
+    padding: 20px; 
+    position: relative; 
+    scrollbar-width: thin;
     
-    /* ★修正: PC版でも少し下げる（22vh） */
-    padding-top: 22vh; 
-    padding-bottom: 80px; 
+    /* カードが少ないときは中央（グラデーションの上）に寄せる */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+}
+
+/* カードが増えて画面からはみ出る場合は、上寄せに戻すためのハック */
+main::before, main::after { content: ''; margin: auto; }
+
+.card-list { 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: center; 
+    align-content: center; /* 縦方向も中央に */
+    gap: 12px; 
+    width: 100%;
+    /* パディング依存を廃止 */
+    padding: 20px 0;
 }
 
 .card { 
@@ -203,140 +240,95 @@ main {
 .sortable-ghost { opacity: 0.4; background: var(--primary-dark); }
 
 /* =========================================
-   Footer & Hand
+   Footer (常に下に固定)
    ========================================= */
 footer { 
-    background: var(--surface); padding: 15px 20px; 
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 20; 
+    background: var(--surface); 
+    padding: 15px 20px; 
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
+    z-index: 20; 
+    
+    /* Flexアイテム設定: サイズ固定 */
+    flex-shrink: 0;
+    
+    /* iPhoneのホームバー用余白 */
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
 }
+
 .hand-container { display: flex; align-items: center; justify-content: space-between; }
 .my-card-wrapper { flex: 1; display: flex; justify-content: center; }
 .my-card { width: 80px; height: 120px; font-size: 2.5rem; color: var(--primary); border: 2px solid var(--primary); font-weight: bold; }
-
-.my-card.submitted { 
-    background: #e0e0e0; border-color: #bdbdbd; color: #757575; 
-    cursor: default; box-shadow: none;
-}
-
+.my-card.submitted { background: #e0e0e0; border-color: #bdbdbd; color: #757575; cursor: default; box-shadow: none; }
 .action-wrapper { flex: 1; display: flex; justify-content: center; }
 
 /* =========================================
-   Buttons
+   Lobby & Other UI Elements
    ========================================= */
+.card-panel.lobby-box { padding: 30px; width: 85%; text-align: center; }
+.app-title { color: var(--primary); margin: 0; font-size: 2rem; font-weight: 900; letter-spacing: 1px; }
+.app-subtitle { color: var(--text-sub); margin: 5px 0 25px 0; font-size: 0.9rem; }
+.input-group { text-align: left; margin-bottom: 20px; }
+.input-group label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px; font-weight: bold; }
+.input-group input { width: 100%; padding: 12px; font-size: 1rem; border: 2px solid #ddd; border-radius: var(--radius-sm); box-sizing: border-box; }
+.input-group input:focus { border-color: var(--primary); outline: none; }
+.select-wrapper { position: relative; border: 2px solid #ddd; border-radius: var(--radius-sm); background: #fff; overflow: hidden; }
+.select-wrapper select { width: 100%; padding: 12px; border: none; font-size: 1rem; background: transparent; cursor: pointer; appearance: none; }
+.select-wrapper:focus-within { border-color: var(--primary); }
+
+/* Buttons & Icons */
 .btn { border: none; border-radius: var(--radius-sm); font-weight: 500; cursor: pointer; transition: 0.2s; font-family: inherit; }
 .btn:active { transform: scale(0.96); }
 .btn-primary { background-color: var(--primary); color: white; box-shadow: var(--shadow-1); }
-.btn-primary:hover { background-color: var(--primary-dark); }
-.btn-primary:disabled { background-color: #b0bec5; box-shadow: none; }
 .btn-accent { background-color: var(--accent); color: white; box-shadow: var(--shadow-1); }
-.btn-accent:disabled { background-color: #b0bec5; color: #eceff1; box-shadow: none; cursor: not-allowed; }
-.btn-accent:hover { background-color: var(--accent-hover); }
 .btn-danger { background-color: var(--bg-color); color: var(--danger); border: 1px solid var(--danger); }
-.btn-danger:hover { background-color: #ffebee; }
 .btn-text { background-color: transparent; color: var(--text-sub); }
-.btn-text:hover { background-color: rgba(0,0,0,0.05); }
 .btn-large { width: 100%; padding: 14px; font-size: 1.1rem; border-radius: 30px; }
 .btn-sm { padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; }
 .btn-fab { padding: 0 25px; height: 48px; border-radius: 24px; font-size: 1rem; box-shadow: var(--shadow-2); }
-
-.icon-btn { 
-    background: #f0f0f0; border: none; color: var(--text-sub); 
-    font-weight: bold; cursor: pointer; font-size: 0.8rem; 
-    padding: 6px 10px; border-radius: 4px; display: flex; align-items: center; gap: 4px; 
-}
-.icon-btn:hover { background-color: #e0e0e0; color: var(--primary); }
-.icon-btn.logout { color: var(--danger); background-color: #ffebee; }
-.icon-btn.logout:hover { background-color: #ffcdd2; }
-
+.icon-btn { background: #f0f0f0; border: none; color: var(--text-sub); font-weight: bold; cursor: pointer; font-size: 0.8rem; padding: 6px 10px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
 .material-icon { font-family: sans-serif; font-style: normal; font-weight: bold; }
 
-/* =========================================
-   Overlays & Modals
-   ========================================= */
-.overlay, .modal {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(38, 50, 56, 0.6);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 1000; backdrop-filter: blur(2px);
-}
-.result-overlay-style {
-    background: rgba(0, 0, 0, 0.1) !important;
-    backdrop-filter: none !important;
-    pointer-events: auto;
-}
+/* Modals */
+.overlay, .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(38, 50, 56, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+.result-overlay-style { background: rgba(0, 0, 0, 0.1) !important; backdrop-filter: none !important; pointer-events: auto; }
 .result-box { max-width: 300px; padding: 40px 30px; animation: popIn 0.4s; box-shadow: var(--shadow-3); }
 .result-icon { font-size: 4rem; margin-bottom: 10px; }
 .result-box.success h2 { color: var(--success); }
 .result-box.fail h2 { color: var(--danger); }
-
 .modal-content { width: 90%; max-width: 500px; max-height: 80vh; padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 .modal-header { padding: 15px 20px; background: var(--bg-color); border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
-.modal-header h2 { margin: 0; font-size: 1.2rem; }
-.close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sub); }
-.history-list { padding: 20px; overflow-y: auto; }
-.history-item { padding: 10px; border-bottom: 1px solid #eee; margin-bottom: 5px; }
-.history-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; }
-.tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; color: white; }
-.tag.success { background: var(--success); }
-.tag.fail { background: var(--danger); }
-.history-detail { font-size: 0.8rem; color: var(--text-sub); margin-top: 5px; }
-.empty-msg { text-align: center; color: var(--text-sub); margin-top: 20px; }
-
 .confirm-box { width: 80%; max-width: 300px; padding: 20px; }
-.confirm-box h3 { margin-top: 0; color: var(--text-main); }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-@keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+/* =========================================
+   Position Modal Adjustment
+   ========================================= */
+/* 位置選択モーダルだけ上寄せにする */
+#position-modal {
+    align-items: flex-start; /* 上揃えに変更（デフォルトはcenter） */
+    padding-top: 24vh;       /* 画面上部から24%の位置に配置 */
+    /* ★修正: 背景のぼかしを消し、色も薄くしてカードを見やすくする */
+    backdrop-filter: none;
+    background-color: rgba(0, 0, 0, 0.2); /* ほんのり暗くする程度 */
+}
 
 /* =========================================
-   Mobile Optimization
+   Mobile Optimization (シンプルに)
    ========================================= */
 @media (max-width: 600px) {
-    body {
-        padding-top: 0;
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
-        background-color: var(--bg-color); 
-    }
-
-    .screen {
-        padding-top: max(40px, env(safe-area-inset-top));
-    }
+    /* Flexboxレイアウトなので、特別な位置調整は不要 */
+    /* 文字サイズ等の微調整のみ行う */
 
     .app-bar {
-        position: fixed;
-        top: 0; left: 0; width: 100%;
-        box-sizing: border-box;
-
-        padding-top: max(44px, calc(15px + env(safe-area-inset-top)));
-        padding-bottom: 10px;
-        padding-left: 15px;
-        padding-right: 15px;
-
-        flex-wrap: wrap;
+        padding-top: max(10px, env(safe-area-inset-top)); /* ノッチ対応 */
+        flex-wrap: wrap; 
         gap: 10px;
-        z-index: 100;
     }
 
-    main {
-        margin-top: 140px; 
-        padding: 20px 15px;
-        background-color: transparent;
-    }
-
-    .card-list {
-        /* ★修正: スマホではさらに下げる（30vh） */
-        /* これで画面中央の矢印付近からカードが始まります */
-        padding-top: 25vh; 
-        gap: 8px;
-    }
-    
-    .theme-container { min-width: 150px; flex: 1; }
-    #theme-text { font-size: 1rem; line-height: 1.4; }
-
+    .card-list { gap: 8px; }
     .field-card { width: 55px; height: 85px; font-size: 0.8rem; }
-    .card-avatar { width: 20px; height: 20px; font-size: 10px; }
 
-    footer { padding-bottom: max(15px, env(safe-area-inset-bottom)); }
+    #lobby-screen {
+        background-image: url('images/lobby-bg-mobile.png');
+    }
 }
