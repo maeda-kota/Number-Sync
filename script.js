@@ -379,14 +379,21 @@ class GameManager {
         // 選択肢1: 先頭
         const optFirst = document.createElement('option');
         optFirst.value = "first";
-        optFirst.textContent = "一番左（小さい）";
+        optFirst.textContent = "一番左（小さい）"; // 文言微調整
         this.positionSelect.appendChild(optFirst);
 
         // 選択肢2以降: 各カードの後ろ
-        cardsArray.forEach((card) => {
+        cardsArray.forEach((card, index) => {
             const opt = document.createElement('option');
             opt.value = card.id; // このカードIDの後ろに追加する
-            opt.textContent = `${card.name} の右（大きい）`;
+            
+            // ★修正: 最後尾の場合だけ「一番右」と表示し、それ以外は「〜の右」とシンプルにする
+            if (index === cardsArray.length - 1) {
+                opt.textContent = "一番右（大きい）";
+            } else {
+                opt.textContent = `${card.name} の右`;
+            }
+            
             this.positionSelect.appendChild(opt);
         });
     }
